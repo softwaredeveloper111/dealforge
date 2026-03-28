@@ -1,7 +1,9 @@
 import express from "express";
-import cors from "cors"
+import cors from "cors";
+import morgan from "morgan"
+import cookieParser from "cookie-parser";
 import errorHandler from "./middlewares/errorHandler.js";
-
+import authRoutes from "./routes/auth.route.js";
 
 
 
@@ -21,8 +23,8 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({extended:true}));
 app.use(express.static("public"))
-
-
+app.use(cookieParser());
+app.use(morgan("dev"))
 
 
 
@@ -38,7 +40,7 @@ app.get("/health", (req, res) => {
 
 
 /** routes — uncomment as you build */
-// app.use("/api/auth", authRoutes);
+app.use("/api/auth", authRoutes);
 // app.use("/api/products", productRoutes);
 // app.use("/api/sessions", sessionRoutes);
 // app.use("/api/leaderboard", leaderboardRoutes);
