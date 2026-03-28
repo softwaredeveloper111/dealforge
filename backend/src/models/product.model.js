@@ -1,77 +1,95 @@
 import mongoose from "mongoose";
 
+const productSchema = new mongoose.Schema(
+  {
+    name: {
+      type: String,
+      required: [true, "Product name is required"],
+      minlength: [4, "Product name must be at least 4 characters"],
+      maxlength: [100, "Product name must be at most 100 characters"],
+    },
 
+    description: {
+      type: String,
+      required: [true, "Product description is required"],
+      minlength: [4, "Description must be at least 4 characters"],
+      maxlength: [500, "Description must be at most 500 characters"],
+    },
 
-const productSchema = new mongoose.Schema({
-  name: {
-    type: String,
-    required: [true,"product name should be required"],
-    minlength: [4,"product name should be at least 3 characters long"],
-    maxlength: [100,"product name should be at most 100 characters long"],
-  },
-  description: {
-    type: String,
-    required: [true,"product description must be required"],
-    minlength: [4,"product description should be at least 4 characters long"],
-    maxlength: [500,"product description should be at most 500 characters long"],
-  },
+    imageUrl: {
+      type: String,
+      required: [true, "Image URL is required"],
+    },
 
-   imageUrl: {
-    type: String,
-    required: [true,"image url must be required"],
-  },
- 
+    /** User ko dikhta hai — MRP */
+    listedPrice: {
+      type: Number,
+      required: [true, "Listed price is required"],
+      min: [1, "Listed price must be greater than 0"],
+    },
 
-  /** user ko e price dikhta hai - MRP */
-  listedPrice: {
-    type: Number,
-    required: [true,"listed price should be required"],
-  },
+    /** AI ka hard limit — is se niche kabhi nahi jayega , gaya to loss hoga */
+    minimumPrice: {
+      type: Number,
+      required: [true, "Minimum price is required"],
+      min: [1, "Minimum price must be greater than 0"],
+      select: false,
+    },
 
+    /** AI ka comfortable profit zone */
+    targetPrice: {
+      type: Number,
+      required: [true, "Target price is required"],
+      min: [1, "Target price must be greater than 0"],
+      select: false,
+    },
 
- /**  is se niche AI kabhi nahi jayega (iska matlab loss hoga seller ko) — ye AI ka hard limit hai */
-  minimumPrice:{
-    type: Number,
-    required: [true,"minimum price should be required"],
-    select:false
-  },
+    
+    aiPersonality: {
+      type: String,
+      required: [true, "AI personality is required"],
+      enum: {
+        values: ["firm", "friendly", "tactical"],
+        message: "AI personality must be firm, friendly, or tactical",
+      },
+    },
 
-
-  /** AI yahan tak aana chahta hai ideally (uska profit comfortable hai yahan tak) */
-  targetPrice:{
-    type:Number,
-    required:[true,"targeted price should be required"],
-    select:false,
-  },
-
-  aiPersonality:{
-    type:String,
-    enum:{
-      values:["firm","friendly","tactical"],
-      message:"ai personality should be firm,tactical or friendly"
+    isActive: {
+      type: Boolean,
+      default: true,
     },
   },
+  { timestamps: true }
+);
 
-  
-  isActive:{
-    type:Boolean,
-    default:true,
+/**
+ * Price hierarchy validation:
+ * listedPrice > targetPrice > minimumPrice
+ */
+productSchema.pre("validate", function (next) {
+  if (this.minimumPrice >= this.targetPrice) {
+    return next(new Error("minimumPrice must be less than targetPrice"));
   }
+  if (this.targetPrice >= this.listedPrice) {
+    return next(new Error("targetPrice must be less than listedPrice"));
+  }
+  next();
+});
 
-},{timestamps:true});
 
 
 
-productSchema.methods.toJSON = function(){
+
+/** Never expose secret pricing fields in API responses */
+productSchema.methods.toJSON = function () {
   const product = this.toObject();
   delete product.minimumPrice;
   delete product.targetPrice;
   return product;
-}
+};
 
 
 
+const productModel = mongoose.model("Product", productSchema);
 
-const productModel = mongoose.model('Product',productSchema);
-
-export default productModel
+export default productModel;
