@@ -11,7 +11,7 @@ import AppError from "../utils/AppError.js";
  * SERVICE 1 — Start a new negotiation session
  * Ek user ek product pe sirf ek active session allowed hai
  */
-const startSession = async ({ userId, productId }) => {
+const startSession = async ( userId, productId ) => {
   // Product fetch karo — secret fields bhi chahiye (select:false override)
   const product = await productModel
     .findOne({ _id: productId, isActive: true })
@@ -54,8 +54,9 @@ const startSession = async ({ userId, productId }) => {
  * SERVICE 2 — Process user message and get AI response
  * Heart of the negotiation game
  */
-const processMessage = async ({ sessionId, userId, userMessage }) => {
+const processMessage = async ( sessionId, userId, userMessage ) => {
   // Session fetch karo
+
   const session = await sessionModel.findOne({ _id: sessionId, userId });
 
   if (!session) {
@@ -135,7 +136,7 @@ const processMessage = async ({ sessionId, userId, userMessage }) => {
  * SERVICE 3 — Accept the current deal
  * Final price lock, leaderboard entry, user stats update
  */
-const acceptDeal = async ({ sessionId, userId }) => {
+const acceptDeal = async ( sessionId, userId ) => {
   const session = await sessionModel.findOne({ _id: sessionId, userId });
 
   if (!session) {
@@ -197,7 +198,7 @@ const acceptDeal = async ({ sessionId, userId }) => {
 /**
  * SERVICE 4 — Abandon session (walk away)
  */
-const abandonSession = async ({ sessionId, userId }) => {
+const abandonSession = async (sessionId, userId ) => {
   const session = await sessionModel.findOne({ _id: sessionId, userId });
 
   if (!session) {
@@ -224,7 +225,7 @@ const abandonSession = async ({ sessionId, userId }) => {
 /**
  * SERVICE 5 — Get session by ID (for frontend state restore)
  */
-const getSessionById = async ({ sessionId, userId }) => {
+const getSessionById = async ( sessionId, userId ) => {
   const session = await sessionModel
     .findOne({ _id: sessionId, userId })
     .populate("productId", "-minimumPrice -targetPrice"); // secret fields hide
@@ -239,7 +240,7 @@ const getSessionById = async ({ sessionId, userId }) => {
 /**
  * SERVICE 6 — Get all sessions of a user
  */
-const getUserSessions = async ({ userId }) => {
+const getUserSessions = async ( userId ) => {
   const sessions = await sessionModel
     .find({ userId })
     .populate("productId", "-minimumPrice -targetPrice")

@@ -4,6 +4,10 @@ import morgan from "morgan"
 import cookieParser from "cookie-parser";
 import errorHandler from "./middlewares/errorHandler.js";
 import authRoutes from "./routes/auth.route.js";
+import productRoutes from "./routes/product.route.js";
+import sessionRoutes from "./routes/session.route.js";
+import leaderboardRoutes from "./routes/leaderBoard.route.js";
+
 
 
 
@@ -41,9 +45,9 @@ app.get("/health", (req, res) => {
 
 /** routes — uncomment as you build */
 app.use("/api/auth", authRoutes);
-// app.use("/api/products", productRoutes);
-// app.use("/api/sessions", sessionRoutes);
-// app.use("/api/leaderboard", leaderboardRoutes);
+app.use("/api/products", productRoutes);
+app.use("/api/sessions", sessionRoutes);
+app.use("/api/leaderboard", leaderboardRoutes);
 
 
 

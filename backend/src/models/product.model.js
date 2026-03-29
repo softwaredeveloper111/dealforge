@@ -66,14 +66,14 @@ const productSchema = new mongoose.Schema(
  * Price hierarchy validation:
  * listedPrice > targetPrice > minimumPrice
  */
-productSchema.pre("validate", function (next) {
+productSchema.pre("validate", function () {
   if (this.minimumPrice >= this.targetPrice) {
     return next(new Error("minimumPrice must be less than targetPrice"));
   }
   if (this.targetPrice >= this.listedPrice) {
     return next(new Error("targetPrice must be less than listedPrice"));
   }
-  next();
+
 });
 
 

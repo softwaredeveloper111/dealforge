@@ -34,7 +34,7 @@ const getGlobalLeaderboard = async () => {
  * SERVICE 2 — User ki apni rank
  * Uski best entry dhundho, phir count karo kitne usse upar hain
  */
-const getUserRank = async ({ userId }) => {
+const getUserRank = async ( userId ) => {
   // User ki best entry (highest discount)
   const userBestEntry = await leaderBoardEntryModel
     .findOne({ userId })

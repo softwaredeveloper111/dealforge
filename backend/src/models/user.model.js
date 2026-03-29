@@ -52,12 +52,10 @@ const userSchema = new mongoose.Schema(
 
 /** Hash password before saving — only if modified */
 userSchema.pre("save", async function () {
-  if (!this.isModified("passwordHash")) return next();
-  this.passwordHash = await bcrypt.hash(
-    this.passwordHash,
-    Number(process.env.HASH_SALT_ROUNDS) || 10
-  );
-  
+  if (this.isModified("passwordHash")) {
+       this.passwordHash = await bcrypt.hash(this.passwordHash,Number(process.env.HASH_SALT_ROUNDS) || 10)
+    
+  }  
 });
 
 
