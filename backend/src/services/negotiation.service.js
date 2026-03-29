@@ -2,8 +2,10 @@ import sessionModel from "../models/session.model.js";
 import productModel from "../models/product.model.js";
 import leaderBoardEntryModel from "../models/LeaderBoardEntry.model.js";
 import userModel from "../models/user.model.js";
-import getAIResponse from "./ai.service.js";
+import getAIResponse , { getAIResponseStream } from "./ai.service.js";
 import AppError from "../utils/AppError.js";
+import { buildScoreSummary } from "./scoring.service.js";
+
 
 
 
@@ -187,12 +189,12 @@ const acceptDeal = async ( sessionId, userId ) => {
 
   await user.save();
 
-  return {
-    finalPrice: session.finalPrice,
-    initialPrice: session.initialPrice,
-    discountPercent: parseFloat(discountPercent.toFixed(2)),
-    message: `Deal closed! You saved ${discountPercent.toFixed(2)}% off the listed price.`,
-  };
+  const summary = buildScoreSummary({
+  listedPrice: session.initialPrice,
+  finalPrice: session.finalPrice,
+  rounds: session.rounds.length,
+});
+return summary;
 };
 
 /**
@@ -249,6 +251,78 @@ const getUserSessions = async ( userId ) => {
   return sessions;
 };
 
+
+/**
+ * SERVICE — Stream version of processMessage
+ * SSE ke liye — AI response token by token bhejta hai
+ */
+const processMessageStream = async ({ sessionId, userId, userMessage, res }) => {
+  const session = await sessionModel.findOne({ _id: sessionId, userId });
+ 
+  if (!session) {
+    throw new AppError("Session not found", 404);
+  }
+ 
+  if (session.status !== "active") {
+    throw new AppError(
+      `This session is already ${session.status}. Start a new session to negotiate.`,
+      400
+    );
+  }
+ 
+  const currentRound = session.rounds.length + 1;
+ 
+  if (currentRound > session.maxRounds) {
+    throw new AppError(
+      "Maximum rounds reached. Please accept the deal or walk away.",
+      400
+    );
+  }
+ 
+  const product = await productModel
+    .findById(session.productId)
+    .select("+minimumPrice +targetPrice");
+ 
+  if (!product) {
+    throw new AppError("Product not found", 404);
+  }
+ 
+  // Streaming AI call — res directly pass ho raha hai
+  const aiResult = await getAIResponseStream({
+    product,
+    rounds: session.rounds,
+    userMessage,
+    currentRound,
+    maxRounds: session.maxRounds,
+    res, // 👈 SSE response object
+  });
+ 
+  // Hard enforcement — minimumPrice se niche nahi jaayega
+  const safeOffer = Math.max(aiResult.currentOffer, product.minimumPrice);
+ 
+  const newRound = {
+    roundNumber: currentRound,
+    userMessage,
+    aiResponse: aiResult.message,
+    priceOffered: safeOffer,
+    timestamp: Date.now(),
+  };
+ 
+  session.rounds.push(newRound);
+  session.currentPrice = safeOffer;
+ 
+  if (currentRound === session.maxRounds) {
+    session.status = "completed";
+    session.dealStatus = "no_deal";
+    session.completedAt = Date.now();
+  }
+ 
+  await session.save();
+};
+ 
+
+
+
 export {
   startSession,
   processMessage,
@@ -256,4 +330,5 @@ export {
   abandonSession,
   getSessionById,
   getUserSessions,
+  processMessageStream,
 };

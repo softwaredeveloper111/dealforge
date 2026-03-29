@@ -5,7 +5,9 @@ import {
   acceptDealController ,
   abandonDealController , 
   getSessionByIdController , 
-  getAllSessionController }
+  getAllSessionController,
+  userSendMessageStreamController
+ }
    from "../controllers/session.controller.js"
 import identifyingUser from "../middlewares/auth.middleware.js"
 import {
@@ -66,6 +68,21 @@ sessionRouter.get("/my" , identifyingUser , getAllSessionController)
  */
 
 sessionRouter.post("/:id/message" , identifyingUser ,sessionSendUserMessageValidation, userSendMessageController)
+
+
+
+
+
+
+
+/**
+ * @method  POST
+ * @route    /api/sessions/id/message/stream
+ * @description   User ka message AI ko bhejo, AI response stream me milega. Ye route real-time negotiation ke liye hai.
+ * @params   - id
+ */
+
+sessionRouter.post("/:id/message/stream", identifyingUser, sessionSendUserMessageValidation, userSendMessageStreamController);
 
 
 

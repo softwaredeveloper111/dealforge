@@ -51,7 +51,7 @@ export const loginController = asyncHandler(async (req, res) => {
   
 
   if(!isUserRegistered){
-    throw new AppError("User not registered yet", 404);
+    throw new AppError("Invalid credentials", 404);
   }
 
   
@@ -106,7 +106,7 @@ export const logoutController  = asyncHandler(async(req,res)=>{
 
   if(token){
     
-   await redis.set(token,Date.now().toString() ,"EX" , 60*60*24)
+   await redis.set(token, "blacklisted" ,"EX" , 60*60*24)
 
   }
   

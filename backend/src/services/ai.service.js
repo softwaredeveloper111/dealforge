@@ -1,9 +1,10 @@
 
+import AppError from "../utils/AppError.js";
 import Groq from "groq-sdk";
 
 
 
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY  });
 
 
 
@@ -113,7 +114,7 @@ const parseAIResponse = (rawText, fallbackPrice) => {
 
 /**
  * Main function — called by negotiation.service
- *
+ * 
  * @param {Object} product        — full product doc (with minimumPrice, targetPrice)
  * @param {Array}  rounds         — all previous rounds [{userMessage, aiResponse, priceOffered}]
  * @param {String} userMessage    — latest message from user
@@ -170,3 +171,95 @@ const getAIResponse = async ({
 };
  
 export default getAIResponse;
+
+
+
+
+
+
+
+
+
+/**
+ * STREAMING VERSION — SSE ke liye
+ * Groq chunks ek ek karke aate hain, hum unhe response mein push karte rehte hain
+ *
+ * @param {Object} product
+ * @param {Array}  rounds
+ * @param {String} userMessage
+ * @param {Number} currentRound
+ * @param {Number} maxRounds
+ * @param {Object} res          — Express response object (SSE ke liye)
+ *
+ * @returns {{ fullMessage: string, currentOffer: number }}
+ */
+const getAIResponseStream = async ({
+  product,
+  rounds,
+  userMessage,
+  currentRound,
+  maxRounds,
+  res,
+}) => {
+  const messages = [];
+
+  for (const round of rounds) {
+    messages.push({ role: "user", content: round.userMessage });
+    messages.push({
+      role: "assistant",
+      content: JSON.stringify({
+        message: round.aiResponse,
+        currentOffer: round.priceOffered,
+      }),
+    });
+  }
+
+  messages.push({ role: "user", content: userMessage });
+
+  const systemPrompt = buildSystemPrompt({ product, currentRound, maxRounds });
+
+  // SSE headers set karo
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.flushHeaders();
+
+  // Groq streaming call
+  const stream = await groq.chat.completions.create({
+    model: MODEL,
+    temperature: 0.7,
+    max_tokens: 300,
+    stream: true, // 👈 ye line streaming on karti hai
+    messages: [{ role: "system", content: systemPrompt }, ...messages],
+  });
+
+  let fullText = "";
+
+  // Har chunk aate hi frontend ko bhejo
+  for await (const chunk of stream) {
+    const token = chunk.choices?.[0]?.delta?.content || "";
+    if (token) {
+      fullText += token;
+      // SSE format: "data: <content>\n\n"
+      res.write(`data: ${JSON.stringify({ token })}\n\n`);
+    }
+  }
+
+  // Stream khatam — ab full response parse karo
+  const fallbackPrice =
+    rounds.length > 0
+      ? rounds[rounds.length - 1].priceOffered
+      : product.listedPrice;
+
+  const parsed = parseAIResponse(fullText, fallbackPrice);
+
+  // Frontend ko signal karo ki stream khatam ho gayi
+  res.write(
+    `data: ${JSON.stringify({ done: true, currentOffer: parsed.currentOffer })}\n\n`
+  );
+  res.end();
+
+  return parsed;
+};
+
+export { getAIResponseStream };

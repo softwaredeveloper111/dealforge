@@ -1,7 +1,7 @@
 import asyncHandler from "../middlewares/asyncHandler.js";
 import AppError from "../utils/AppError.js";
 import sessionModel from "../models/session.model.js";
-import {startSession ,processMessage , acceptDeal ,abandonSession , getSessionById , getUserSessions } from "../services/negotiation.service.js"
+import {startSession ,processMessage , acceptDeal ,abandonSession , getSessionById , getUserSessions , processMessageStream } from "../services/negotiation.service.js"
 
 
 
@@ -121,3 +121,32 @@ export const getAllSessionController = asyncHandler(async(req,res)=>{
   })
 
 });
+
+
+
+
+
+
+
+export const userSendMessageStreamController = async (req, res) => {
+  // asyncHandler USE MAT KARO — SSE mein error differently handle hota hai
+  try {
+    const userId = req.user.id;
+    const sessionId = req.params.id;
+    const userMessage = req.body.message;
+ 
+    await processMessageStream({ sessionId, userId, userMessage, res });
+  } catch (error) {
+    // Agar SSE shuru hone se pehle error aaya
+    if (!res.headersSent) {
+      res.status(error.statusCode || 500).json({
+        success: false,
+        message: error.message || "Something went wrong",
+      });
+    } else {
+      // SSE already shuru ho gayi thi — error event bhejo
+      res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
+      res.end();
+    }
+  }
+};
