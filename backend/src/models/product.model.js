@@ -8,6 +8,7 @@ const productSchema = new mongoose.Schema(
       minlength: [4, "Product name must be at least 4 characters"],
       maxlength: [100, "Product name must be at most 100 characters"],
     },
+    
 
     description: {
       type: String,
@@ -15,6 +16,13 @@ const productSchema = new mongoose.Schema(
       minlength: [4, "Description must be at least 4 characters"],
       maxlength: [500, "Description must be at most 500 characters"],
     },
+
+
+    features:[
+      {
+        type:String,
+      }
+    ],
 
     imageUrl: {
       type: String,

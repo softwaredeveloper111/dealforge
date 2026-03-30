@@ -19,10 +19,18 @@ export const createProductController = asyncHandler(async(req,res)=>{
 
 
 export const getAllProductController = asyncHandler(async(req,res)=>{
-  const products = await productModel.find({ isActive: true });
+ 
+    const page = Number(req.query.page) || 1;
+  const limit = Number(req.query.limit) || 6;
+  const skip = (page - 1) * limit;
+
+ const products = await productModel
+    .find({ isActive: true })
+    .skip(skip)
+    .limit(limit);
+
   res.status(200).json({
     success:true,
-    message:"products fetched successfully",
     data:products
   })
 })
